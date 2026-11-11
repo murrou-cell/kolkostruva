@@ -202,6 +202,7 @@ function productTable(items){
  return `<div class="card"><table><tr><th>Продукт</th><th class="n">Цена</th><th class="n hide-s">Мин–макс</th><th class="n">€/кг|л</th><th></th></tr>`+
  items.map(r=>`<tr><td>${esc(r.name)}</td><td class="n">${priceCell(r)}</td><td class="n hide-s">${spread(r)}</td><td class="n">${unitCell(r)}</td><td class="n">${inCart(r.g)<0?`<button data-add="${esc(r.g)}">+</button>`:'✓'}</td></tr>`).join('')+'</table></div>';
 }
+const dm=d=>d?d.slice(8)+'.'+d.slice(5,7):'';
 function viewChanges(){
  if(!CH)return '<div class="card"><div class="empty">Все още няма достатъчно история за промени в цените.</div></div>';
  const opts=chains.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
@@ -212,7 +213,7 @@ function viewChanges(){
  <select id="tchain"><option value="">Всички вериги</option>${opts}</select>
  ${catPicker('tcat',S.tcat)}</div>
  <p class="mut hint">Промяна на обичайната цена от ${esc(CH.from)} до ${esc(CH.date)}, над 2%, ${ci?esc(ci.name)+' (продукти от този град)':'цялата страна'} · ${pool.length} продукта</p>`+
- (pool.length?`<div class="card"><table>`+pool.slice(0,S.tn).map(r=>`<tr><td>${esc(r[2])}<div class="mut">${esc(r[0])}</div></td><td class="n">${eur(r[4])} → <b>${eur(r[5])}</b></td><td class="n"><span class="${r[6]>0?'up':'off'}">${r[6]>0?'+':'−'}${Math.round(Math.abs(r[6])*100)}%</span></td></tr>`).join('')+'</table></div>'+(pool.length>S.tn?'<p style="text-align:center"><button id="tmore">Покажи още</button></p>':''):'<div class="card"><div class="empty">Няма промени за този избор</div></div>');
+ (pool.length?`<div class="card"><table>`+pool.slice(0,S.tn).map(r=>`<tr><td>${esc(r[2])}<div class="mut">${esc(r[0])} · промяна на ${dm(r[7])} (спрямо ${dm(r[8]||CH.from)})</div></td><td class="n">${eur(r[4])} → <b>${eur(r[5])}</b></td><td class="n"><span class="${r[6]>0?'up':'off'}">${r[6]>0?'+':'−'}${Math.round(Math.abs(r[6])*100)}%</span></td></tr>`).join('')+'</table></div>'+(pool.length>S.tn?'<p style="text-align:center"><button id="tmore">Покажи още</button></p>':''):'<div class="card"><div class="empty">Няма промени за този избор</div></div>');
 }
 function viewChains(){
  if(!S.chain)return '<p class="mut hint">Избери верига, за да разгледаш всички нейни цени.</p><div class="grid">'+

@@ -49,8 +49,8 @@ def update(data_dir):
             continue
         pct = (ev[-1][1] - ref[1]) / ref[1]
         if abs(pct) >= MIN_PCT:
-            out.append([r[0], r[1], r[2], r[3], ref[1], ev[-1][1], round(pct, 3), ev[-1][0]])
+            out.append([r[0], r[1], r[2], r[3], ref[1], ev[-1][1], round(pct, 3), ev[-1][0], ref[0]])
     out.sort(key=lambda x: -abs(x[6]))
     _write(os.path.join(data_dir, "changes.json"), {
         "date": latest, "window": WINDOW, "from": h["days"][max(0, len(h["days"]) - WINDOW - 1)],
-        "cols": ["chain", "sku", "name", "cat", "old", "new", "pct", "changed"], "rows": out})
+        "cols": ["chain", "sku", "name", "cat", "old", "new", "pct", "changed", "since"], "rows": out})
