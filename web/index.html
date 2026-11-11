@@ -113,7 +113,7 @@ const eur=v=>v==null?'':v.toFixed(2)+' €';
 const norm=s=>s.toLowerCase().replace(/\s+/g,' ').trim();
 const PAGE=50,GMAX=60,SHOW=4;
 let rows=[],chains=[],cities=[],GM={},S={city:'',date:'',tab:'deals',dmode:'promo',dchain:'',dcat:'',scat:'',dn:12,q:'',sort:'rel',promo:false,chain:null,cq:'',csort:'name',cpromo:false,page:0,cart:false,tmode:'up',tchain:'',tcat:'',tn:30};
-let CH=null;
+let CH=null,RK=new Set();
 let cart=[];try{cart=JSON.parse(localStorage.getItem('cart')||'[]')}catch(e){}
 const saveCart=()=>{try{localStorage.setItem('cart',JSON.stringify(cart))}catch(e){}};
 
@@ -205,12 +205,13 @@ function productTable(items){
 function viewChanges(){
  if(!CH)return '<div class="card"><div class="empty">Все още няма достатъчно история за промени в цените.</div></div>';
  const opts=chains.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
- const pool=CH.rows.filter(r=>(S.tmode==='up'?r[6]>0:r[6]<0)&&(!S.tchain||r[0]===S.tchain)&&(!S.tcat||catMatch({list:[{cat:r[3]}]},S.tcat)));
+ const ci=cities.find(x=>x.code===S.city);
+ const pool=CH.rows.filter(r=>(!S.city||RK.has(r[0]+'|'+r[1]))&&(S.tmode==='up'?r[6]>0:r[6]<0)&&(!S.tchain||r[0]===S.tchain)&&(!S.tcat||catMatch({list:[{cat:r[3]}]},S.tcat)));
  pool.sort((a,b)=>S.tmode==='up'?b[6]-a[6]:a[6]-b[6]);
  return `<div class="bar"><div class="seg"><button data-tm="up" class="${S.tmode==='up'?'on':''}">Поскъпнали</button><button data-tm="down" class="${S.tmode==='down'?'on':''}">Поевтинели</button></div>
  <select id="tchain"><option value="">Всички вериги</option>${opts}</select>
  ${catPicker('tcat',S.tcat)}</div>
- <p class="mut hint">Промяна на обичайната цена от ${esc(CH.from)} до ${esc(CH.date)}, над 2%, за цялата страна · ${pool.length} продукта</p>`+
+ <p class="mut hint">Промяна на обичайната цена от ${esc(CH.from)} до ${esc(CH.date)}, над 2%, ${ci?esc(ci.name)+' (продукти от този град)':'цялата страна'} · ${pool.length} продукта</p>`+
  (pool.length?`<div class="card"><table>`+pool.slice(0,S.tn).map(r=>`<tr><td>${esc(r[2])}<div class="mut">${esc(r[0])}</div></td><td class="n">${eur(r[4])} → <b>${eur(r[5])}</b></td><td class="n"><span class="${r[6]>0?'up':'off'}">${r[6]>0?'+':'−'}${Math.round(Math.abs(r[6])*100)}%</span></td></tr>`).join('')+'</table></div>'+(pool.length>S.tn?'<p style="text-align:center"><button id="tmore">Покажи още</button></p>':''):'<div class="card"><div class="empty">Няма промени за този избор</div></div>');
 }
 function viewChains(){
@@ -344,6 +345,7 @@ function setData(d,keep){
  rows=d.rows.map(a=>{const o={};c.forEach((k,i)=>o[k]=a[i]);o.k=norm(o.name+' '+o.chain);o.g=gkey(o.name);return o;});
  const m={};for(const r of rows){const x=m[r.chain]||(m[r.chain]={name:r.chain,n:0,p:0});x.n++;if(r.promo)x.p++;}
  chains=Object.values(m).sort((a,b)=>b.n-a.n);
+ RK=new Set(rows.map(r=>r.chain+'|'+r.sku));
  buildGroups();computeDeals();S.date=d.date;
  if(S.chain&&!m[S.chain]){S.chain=null;S.cq='';}
  const ci=cities.find(x=>x.code===S.city);
