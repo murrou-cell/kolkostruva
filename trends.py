@@ -3,7 +3,6 @@ import json, os, datetime
 
 WINDOW = int(os.environ.get("TREND_DAYS", "14"))
 MIN_PCT = float(os.environ.get("TREND_MIN_PCT", "0.02"))
-MAX_PCT = 1.0
 KEEP = 60
 
 
@@ -49,7 +48,7 @@ def update(data_dir):
         if ref[1] <= 0 or ref[0] == ev[-1][0]:
             continue
         pct = (ev[-1][1] - ref[1]) / ref[1]
-        if MIN_PCT <= abs(pct) <= MAX_PCT:
+        if abs(pct) >= MIN_PCT:
             out.append([r[0], r[1], r[2], r[3], ref[1], ev[-1][1], round(pct, 3), ev[-1][0]])
     out.sort(key=lambda x: -abs(x[6]))
     _write(os.path.join(data_dir, "changes.json"), {
