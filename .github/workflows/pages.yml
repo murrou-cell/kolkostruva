@@ -27,18 +27,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Restore price history from the live site
+        id: hist
+        run: |
+          mkdir -p _data
+          code=$(curl -s -o _data/hist.json -w '%{http_code}' https://murrou-cell.github.io/kolkostruva/data/hist.json)
+          if [ "$code" = 404 ]; then rm -f _data/hist.json; echo "backfill=14" >> "$GITHUB_OUTPUT"
+          elif [ "$code" = 200 ]; then echo "backfill=3" >> "$GITHUB_OUTPUT"
+          else echo "unexpected status $code, refusing to reset history"; exit 1; fi
       - name: Fetch and reduce the latest КЗП data
         env:
           DATA_DIR: ${{ github.workspace }}/_data
-          BACKFILL_DAYS: "3"
-          KEEP_DAYS: "1"
+          BACKFILL_DAYS: ${{ steps.hist.outputs.backfill }}
+          KEEP_DAYS: "14"
         run: python updater.py --once
       - name: Assemble site
         run: |
           test -s _data/latest.json || { echo "no data fetched"; exit 1; }
           mkdir -p _site/data
           cp -r web/. _site/
-          cp _data/latest.json _data/meta.json _site/data/
+          cp _data/latest.json _data/meta.json _data/hist.json _data/changes.json _site/data/
           cp -r _data/cities _site/data/cities
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

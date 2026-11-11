@@ -59,6 +59,8 @@ td.n,th.n{text-align:right;white-space:nowrap}
 #cart .li{display:flex;justify-content:space-between;gap:8px;padding:2px 0 2px 12px;font-size:13px;color:var(--mut)}
 .sm{font-size:12px;color:var(--mut)}
 .pill{margin-left:auto;font-weight:600;border-color:var(--acc)!important}
+.up{background:#fee2e2;color:#b91c1c;border-radius:6px;padding:1px 6px;font-weight:700;white-space:nowrap}
+@media(prefers-color-scheme:dark){.up{background:#3b1414;color:#f87171}}
 .off{background:var(--promobg);color:var(--promo);border-radius:6px;padding:1px 6px;font-weight:700;white-space:nowrap}
 .seg{display:flex;gap:6px;flex-wrap:wrap}
 .seg button.on{background:var(--acc);color:var(--bg);font-weight:600}
@@ -97,7 +99,7 @@ button{min-height:36px}
 <header><div class="wrap">
  <div class="top"><h1>Колко струва</h1><span class="mut" id="meta">Зареждане…</span><select id="city" title="Град" class="pill"><option value="">Цялата страна</option></select></div>
  <nav id="nav">
-  <a data-t="deals">Оферти</a><a data-t="search">Търсене</a><a data-t="chains">Вериги</a>
+  <a data-t="deals">Оферти</a><a data-t="search">Търсене</a><a data-t="chains">Вериги</a><a data-t="changes">Промени</a>
  </nav>
 </div></header>
 <main class="wrap" id="app"></main>
@@ -110,7 +112,8 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const eur=v=>v==null?'':v.toFixed(2)+' €';
 const norm=s=>s.toLowerCase().replace(/\s+/g,' ').trim();
 const PAGE=50,GMAX=60,SHOW=4;
-let rows=[],chains=[],cities=[],GM={},S={city:'',date:'',tab:'deals',dmode:'promo',dchain:'',dcat:'',scat:'',dn:12,q:'',sort:'rel',promo:false,chain:null,cq:'',csort:'name',cpromo:false,page:0,cart:false};
+let rows=[],chains=[],cities=[],GM={},S={city:'',date:'',tab:'deals',dmode:'promo',dchain:'',dcat:'',scat:'',dn:12,q:'',sort:'rel',promo:false,chain:null,cq:'',csort:'name',cpromo:false,page:0,cart:false,tmode:'up',tchain:'',tcat:'',tn:30};
+let CH=null;
 let cart=[];try{cart=JSON.parse(localStorage.getItem('cart')||'[]')}catch(e){}
 const saveCart=()=>{try{localStorage.setItem('cart',JSON.stringify(cart))}catch(e){}};
 
@@ -199,6 +202,17 @@ function productTable(items){
  return `<div class="card"><table><tr><th>Продукт</th><th class="n">Цена</th><th class="n hide-s">Мин–макс</th><th class="n">€/кг|л</th><th></th></tr>`+
  items.map(r=>`<tr><td>${esc(r.name)}</td><td class="n">${priceCell(r)}</td><td class="n hide-s">${spread(r)}</td><td class="n">${unitCell(r)}</td><td class="n">${inCart(r.g)<0?`<button data-add="${esc(r.g)}">+</button>`:'✓'}</td></tr>`).join('')+'</table></div>';
 }
+function viewChanges(){
+ if(!CH)return '<div class="card"><div class="empty">Все още няма достатъчно история за промени в цените.</div></div>';
+ const opts=chains.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+ const pool=CH.rows.filter(r=>(S.tmode==='up'?r[6]>0:r[6]<0)&&(!S.tchain||r[0]===S.tchain)&&(!S.tcat||catMatch({list:[{cat:r[3]}]},S.tcat)));
+ pool.sort((a,b)=>S.tmode==='up'?b[6]-a[6]:a[6]-b[6]);
+ return `<div class="bar"><div class="seg"><button data-tm="up" class="${S.tmode==='up'?'on':''}">Поскъпнали</button><button data-tm="down" class="${S.tmode==='down'?'on':''}">Поевтинели</button></div>
+ <select id="tchain"><option value="">Всички вериги</option>${opts}</select>
+ ${catPicker('tcat',S.tcat)}</div>
+ <p class="mut hint">Промяна на обичайната цена от ${esc(CH.from)} до ${esc(CH.date)}, над 2%, за цялата страна · ${pool.length} продукта</p>`+
+ (pool.length?`<div class="card"><table>`+pool.slice(0,S.tn).map(r=>`<tr><td>${esc(r[2])}<div class="mut">${esc(r[0])}</div></td><td class="n">${eur(r[4])} → <b>${eur(r[5])}</b></td><td class="n"><span class="${r[6]>0?'up':'off'}">${r[6]>0?'+':'−'}${Math.round(Math.abs(r[6])*100)}%</span></td></tr>`).join('')+'</table></div>'+(pool.length>S.tn?'<p style="text-align:center"><button id="tmore">Покажи още</button></p>':''):'<div class="card"><div class="empty">Няма промени за този избор</div></div>');
+}
 function viewChains(){
  if(!S.chain)return '<p class="mut hint">Избери верига, за да разгледаш всички нейни цени.</p><div class="grid">'+
   chains.map(c=>`<div class="chain" data-c="${esc(c.name)}"><b>${esc(c.name)}</b><span class="mut">${c.n} продукта${c.p?` · ${c.p} в промоция`:''}</span></div>`).join('')+'</div>';
@@ -284,7 +298,7 @@ function copyCart(btn){
 function render(keepFocus){
  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.t===S.tab));
  const f=document.activeElement&&document.activeElement.id,pos=document.activeElement&&document.activeElement.selectionStart;
- $('#app').innerHTML=S.tab==='deals'?viewDeals():S.tab==='search'?viewSearch():viewChains();
+ $('#app').innerHTML=S.tab==='deals'?viewDeals():S.tab==='search'?viewSearch():S.tab==='changes'?viewChanges():viewChains();
  bind();renderCart();
  if(keepFocus&&f){const e=document.getElementById(f);if(e){e.focus();try{e.setSelectionRange(pos,pos)}catch(x){}}}
  try{history.replaceState(null,'','#'+S.tab+(S.tab==='chains'&&S.chain?'/'+encodeURIComponent(S.chain):S.tab==='search'&&S.q.trim()?'/'+encodeURIComponent(S.q.trim()):''))}catch(e){}
@@ -294,6 +308,9 @@ function bind(){
  let t;const deb=fn=>()=>{clearTimeout(t);t=setTimeout(fn,150);};
  on('dchain','change',()=>{S.dchain=$('#dchain').value;S.dn=12;render();});const dc=$('#dchain');if(dc)dc.value=S.dchain;wirePicker('dcat','dcat',()=>{S.dn=12;render();});
  on('more','click',()=>{S.dn+=12;render();});
+ on('tmore','click',()=>{S.tn+=30;render();});
+ on('tchain','change',()=>{S.tchain=$('#tchain').value;S.tn=30;render();});const tc=$('#tchain');if(tc)tc.value=S.tchain;wirePicker('tcat','tcat',()=>{S.tn=30;render();});
+ document.querySelectorAll('[data-tm]').forEach(e=>e.onclick=()=>{S.tmode=e.dataset.tm;S.tn=30;render();});
  document.querySelectorAll('[data-dm]').forEach(e=>e.onclick=()=>{S.dmode=e.dataset.dm;S.dn=12;render();});
  on('q','input',deb(()=>{S.q=$('#q').value;render(true);}));
  on('sort','change',()=>{S.sort=$('#sort').value;render();});const so=$('#sort');if(so)so.value=S.sort;
@@ -337,9 +354,10 @@ function loadData(){
  const url=S.city?`data/cities/${S.city}.json`:'data/latest.json';
  return fetch(url).then(r=>{if(!r.ok)throw 0;return r.json();}).then(d=>setData(d)).catch(()=>{if(S.city){S.city='';try{localStorage.removeItem('city')}catch(e){}$('#city').value='';return loadData();}$('#meta').textContent='Все още няма данни.';render();});
 }
+fetch('data/changes.json').then(r=>r.ok?r.json():null).catch(()=>null).then(x=>{CH=x;if(S.tab==='changes')render();});
 $('#city').onchange=()=>{S.city=$('#city').value;try{localStorage.setItem('city',S.city)}catch(e){}loadData();};
 const h=decodeURIComponent(location.hash.slice(1)).split('/');
-if(['deals','search','chains'].includes(h[0]))S.tab=h[0];
+if(['deals','search','chains','changes'].includes(h[0]))S.tab=h[0];
 if(h[0]==='search'&&h[1])S.q=h[1];
 if(h[0]==='chains'&&h[1])S.chain=h[1];
 try{S.city=localStorage.getItem('city')||''}catch(e){}

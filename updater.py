@@ -2,6 +2,7 @@
 import json, os, sys, time, urllib.request, urllib.error, tempfile, datetime
 from collections import Counter
 from reduce import reduce
+import trends
 
 BASE = os.environ.get("SOURCE_BASE", "https://kolkostruva.bg/opendata_files")
 DATA = os.environ.get("DATA_DIR", "/data")
@@ -70,6 +71,7 @@ def run_once():
             write_atomic(out, res)
             write_cities({"cities": cit}, d)
             print("ingested", d, flush=True)
+    trends.update(DATA)
     days = sorted(f[:-5] for f in os.listdir(hist) if f.endswith(".json"))
     for old in days[:-KEEP_DAYS]:
         os.remove(os.path.join(hist, f"{old}.json"))
